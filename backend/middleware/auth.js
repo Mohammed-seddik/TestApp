@@ -1,29 +1,18 @@
 "use strict";
+
 const jwt = require("jsonwebtoken");
+const db = require("../db");
+const { isEnabled: isKeycloakEnabled } = require("../../integrations/keycloak/backend/config");
+const { verifyKeycloakAccessToken } = require("../../integrations/keycloak/backend/verifier");
+const { upsertKeycloakUser } = require("../../integrations/keycloak/backend/user-sync");
+//^ Auth orchestration lives in integrations/service-auth.
+const { buildAuthenticate } = require("../../integrations/service-auth/backend/authenticate");
 
-/**
- * Validates the Authorization: Bearer <token> header.
- * Attaches decoded payload to req.user on success.
- */
-function authenticate(req, res, next) {
-  const authHeader =
-    req.headers["authorization"] || req.headers["Authorization"];
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ error: "Missing or invalid Authorization header." });
-  }
-
-  const token = authHeader.slice(7); // strip "Bearer "
-
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { sub, username, role, iat, exp }
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Token expired or invalid." });
-  }
-}
-
-module.exports = authenticate;
+//^ Thin app-level composition: inject local deps into shared service-auth module.
+module.exports = buildAuthenticate({
+  jwt,
+  db,
+  isKeycloakEnabled,
+  verifyKeycloakAccessToken,
+  upsertKeycloakUser,
+});

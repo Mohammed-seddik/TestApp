@@ -1,0 +1,287 @@
+{
+  "version": "new version",
+  "policies": [
+    {
+      "name": "Operating System Version",
+      "platforms": {
+        "Android": {
+          "supported": true,
+          "osLevels": [13, 14, 15, 16],
+          "resources": {
+            "securityPatch": "2026-02-01"
+          }
+        },
+        "iOS": {
+          "supported": true,
+          "osLevels": [14.8, 15.7, 16.0],
+          "resources": {}
+        },
+        "macOS": {
+          "supported": true,
+          "osLevels": [18.7, 26.2],
+          "resources": {}
+        },
+        "Windows": {
+          "supported": true,
+          "versions": [
+            {
+              "name": "Windows 10",
+              "builds": ["10.0.17763.8276", "10.0.19044.6809", "10.0.19045.6809"]
+            },
+            {
+              "name": "Windows 11",
+              "builds": ["10.0.22631.6491", "10.0.26100.7623", "10.0.26200.7623"]
+            }
+          ]
+        },
+        "Linux": {
+          "supported": true,
+          "distributions": [
+            {
+              "name": "Ubuntu Desktop",
+              "versions": ["22.04 LTS", "24.04 LTS"]
+            },
+            {
+              "name": "RedHat Enterprise Linux",
+              "versions": [8, 9]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Full Disk Encryption",
+      "platforms": {
+        "Android": {
+          "supported": true,
+          "condition": "The device disk must be encrypted.",
+          "notes": "Devices with Android 8 or 9 support full-disk encryption. Devices with Android 10 or later support full-disk encryption only if upgraded from a previous version. Devices with Android 10 and later use file-based encryption."
+        },
+        "iOS": {
+          "supported": false,
+          "condition": "Not applicable",
+          "notes": "The disk must be encrypted."
+        },
+        "macOS": {
+          "supported": true,
+          "condition": "The disk must be encrypted."
+        },
+        "Windows": {
+          "supported": true,
+          "condition": "The disk must be encrypted."
+        },
+        "Linux": {
+          "supported": true,
+          "condition": "Not applicable"
+        }
+      }
+    },
+    {
+      "name": "Host Firewall Status",
+      "platforms": {
+        "Android": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "iOS": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "macOS": {
+          "supported": true,
+          "condition": "Firewall must be enabled."
+        },
+        "Windows": {
+          "supported": true,
+          "condition": "Firewall must be enabled."
+        },
+        "Linux": {
+          "supported": false,
+          "condition": "Not applicable"
+        }
+      }
+    },
+    {
+      "name": "Endpoint Protection",
+      "platforms": {
+        "Android": {
+          "supported": true,
+          "protectionSystem": "Google Play Protect",
+          "condition": "Users who disabled scan services on their devices are prompted to enable them again.",
+          "riskThresholds": [
+            {
+              "level": "Low",
+              "description": "No issues were found. This is the most secure option."
+            },
+            {
+              "level": "Medium",
+              "description": "The scan detected potentially harmful apps."
+            },
+            {
+              "level": "High",
+              "description": "The scan detected harmful apps or the scan wasn't evaluated. This is the least secure option."
+            }
+          ]
+        },
+        "iOS": {
+          "supported": true,
+          "protectionSystem": "Secure Enclave",
+          "condition": "The device must support Secure Enclave."
+        },
+        "macOS": {
+          "supported": false,
+          "protectionSystem": "Antivirus",
+          "condition": "Not applicable"
+        },
+        "Windows": {
+          "supported": false,
+          "protectionSystem": "Antivirus",
+          "condition": "Not applicable"
+        },
+        "Linux": {
+          "supported": false,
+          "condition": "Not applicable"
+        }
+      }
+    },
+    {
+      "name": "Device Integrity",
+      "platforms": {
+        "Android": {
+          "supported": true,
+          "condition": "Denies access on rooted devices."
+        },
+        "iOS": {
+          "supported": true,
+          "condition": "Denies access on jailbroken devices."
+        },
+        "macOS": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "Windows": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "Linux": {
+          "supported": false,
+          "condition": "Not applicable"
+        }
+      }
+    },
+    {
+      "name": "Screen Lock Configuration",
+      "platforms": {
+        "Android": {
+          "supported": true,
+          "condition": "The device must have a screen lock. Also, select this checkbox if biometrics is required."
+        },
+        "iOS": {
+          "supported": true,
+          "condition": "The device requires a passcode. Also, select the option if Touch ID or Face ID is required."
+        },
+        "macOS": {
+          "supported": true,
+          "condition": "The device requires a password or Touch ID."
+        },
+        "Windows": {
+          "supported": true,
+          "condition": "The lock screen requires a password."
+        },
+        "Linux": {
+          "supported": true,
+          "condition": "The lock screen requires a password."
+        }
+      }
+    },
+    {
+      "name": "Trusted Platform Module (TPM)",
+      "platforms": {
+        "Android": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "iOS": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "macOS": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "Windows": {
+          "supported": true,
+          "condition": "Device must support a Trusted Platform Module chip"
+        },
+        "Linux": {
+          "supported": false,
+          "condition": "Not applicable"
+        }
+      }
+    },
+    {
+      "name": "Device Registration",
+      "platforms": {
+        "Android": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "iOS": {
+          "supported": false,
+          "condition": "Not applicable"
+        },
+        "macOS": {
+          "supported": true,
+          "condition": "Device must be registered and enrolled in the organization's management system."
+        },
+        "Windows": {
+          "supported": true,
+          "condition": "Device must be registered and enrolled in the organization's management system. Device must be Domain Joined to the specified domain or workgroup, or Azure AD Joined, or hybrid joined (both)."
+        },
+        "Linux": {
+          "supported": false,
+          "condition": "Not applicable"
+        }
+      }
+    },
+    {
+      "name": "Password Policy",
+      "platforms": {
+        "Android": {
+          "supported": true,
+          "condition": "Device must have a password set.",
+          "complexity": ["None", "Low", "Medium", "High"],
+          "minLength": "4-16 characters",
+          "passwordExpiration": "1-365 days (configurable)"
+        },
+        "iOS": {
+          "supported": true,
+          "condition": "Device must have a passcode set. Alphanumeric or numeric.",
+          "minLength": "Configurable",
+          "expirationAndReuse": "Restrictions apply"
+        },
+        "macOS": {
+          "supported": true,
+          "condition": "Device must have a password set.",
+          "minLength": "Configurable",
+          "requirements": ["Alphanumeric type", "Special characters"],
+          "expiration": "Configurable"
+        },
+        "Windows": {
+          "supported": true,
+          "condition": "Device must have a password or Windows Hello PIN.",
+          "types": ["Alphanumeric with optional special characters"],
+          "minLength": "Configurable",
+          "expiration": "Configurable",
+          "reuseRestrictions": "Configurable"
+        },
+        "Linux": {
+          "supported": true,
+          "condition": "Device must meet minimum password requirements.",
+          "requirements": ["Minimum length", "Uppercase", "Lowercase", "Digits", "Symbols"],
+          "configurable": true
+        }
+      }
+    }
+  ]
+}

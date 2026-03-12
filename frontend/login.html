@@ -68,11 +68,42 @@
   <div class="link-row">
     Don't have an account? <a href="/register.html">Register</a>
   </div>
+
+  <hr style="margin: 18px 0; border: none; border-top: 1px solid #e2e2e2;" />
+  <button type="button" id="keycloakBtn" style="background:#1b5e20;">Sign In With Keycloak</button>
 </div>
 
+<script src="/keycloak/keycloak.js"></script>
+<script src="/keycloak/keycloak-bridge.js"></script>
 <script>
+  //^ Legacy/local login page; Keycloak button is enabled only when integration config says so.
   // Redirect if already logged in
   if (localStorage.getItem('jwt')) window.location.href = '/dashboard.html';
+
+  (async () => {
+    try {
+      const cfg = await window.KeycloakBridge.getConfig();
+      const keycloakBtn = document.getElementById('keycloakBtn');
+      if (!cfg.enabled) {
+        keycloakBtn.style.display = 'none';
+        return;
+      }
+      keycloakBtn.addEventListener('click', async () => {
+        try {
+          await window.KeycloakBridge.login();
+        } catch (err) {
+          console.error('Keycloak login failed:', err);
+          const msg = document.getElementById('msg');
+          msg.textContent = err && err.message ? err.message : 'Keycloak login failed.';
+          msg.className = 'msg err';
+        }
+      });
+    } catch (err) {
+      console.error('Keycloak setup failed:', err);
+      const keycloakBtn = document.getElementById('keycloakBtn');
+      if (keycloakBtn) keycloakBtn.style.display = 'none';
+    }
+  })();
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();

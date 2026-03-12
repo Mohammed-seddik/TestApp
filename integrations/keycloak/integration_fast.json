@@ -1,0 +1,68 @@
+{
+  "id": "keycloak-fast-integration",
+  "version": "1.0.0",
+  "owner": "service-auth",
+  "title": "Fast Integration (Keycloak)",
+  "summary": "Quick setup for Keycloak credential verification via internal service endpoints.",
+  "setup": {
+    "script": {
+      "working_directory": "backend",
+      "command": "./scripts/setup-integration.sh",
+      "effects": [
+        "Sets INTERNAL_AUTH_SHARED_SECRET",
+        "Sets INTERNAL_AUTH_ALLOWED_IPS"
+      ]
+    },
+    "restart": {
+      "working_directory": "backend",
+      "command": "npm start"
+    }
+  },
+  "healthcheck": {
+    "method": "GET",
+    "url": "http://<APP_HOST>:3000/api/auth/internal/ping",
+    "headers": {
+      "x-internal-auth-secret": "<YOUR_SECRET>"
+    },
+    "expected_status": 200,
+    "expected_body": {
+      "ok": true
+    }
+  },
+  "credential_verification": {
+    "method": "POST",
+    "url": "http://<APP_HOST>:3000/api/auth/internal/verify-credentials",
+    "headers": {
+      "Content-Type": "application/json",
+      "x-internal-auth-secret": "<YOUR_SECRET>"
+    },
+    "body_schema": {
+      "username": "<username>",
+      "password": "<password>"
+    },
+    "valid_credential_status": 200,
+    "invalid_credential_status": [
+      401,
+      403
+    ]
+  },
+  "security": {
+    "requirements": [
+      "Restrict /api/auth/internal/* to Keycloak caller IPs",
+      "Keep INTERNAL_AUTH_SHARED_SECRET private",
+      "Rotate INTERNAL_AUTH_SHARED_SECRET periodically"
+    ],
+    "env_required": [
+      "INTERNAL_AUTH_SHARED_SECRET",
+      "INTERNAL_AUTH_ALLOWED_IPS"
+    ]
+  },
+  "opa_contract": {
+    "input_source": "Token claims + request context",
+    "decision_outputs": [
+      "allow",
+      "deny",
+      "reason"
+    ]
+  }
+}

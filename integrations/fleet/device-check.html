@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Policy Check – TaskApp</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar ────────────────────────────────────────── */
+    nav {
+      background: #0f3460;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 56px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+    }
+
+    nav .brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      cursor: pointer;
+    }
+
+    nav .brand:hover {
+      text-decoration: underline;
+    }
+
+    nav .right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: .9rem;
+    }
+
+    #backBtn {
+      background: rgba(255, 255, 255, .15);
+      border: 1px solid rgba(255, 255, 255, .35);
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .85rem;
+      transition: background .2s;
+    }
+
+    #backBtn:hover {
+      background: rgba(255, 255, 255, .28);
+    }
+
+    /* ── Main ──────────────────────────────────────────── */
+    main {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    /* ── Card ──────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      color: #0f3460;
+      margin-bottom: 16px;
+    }
+
+    /* ── Check Results ──────────────────────────────────── */
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .policy-item {
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+      transition: all .2s;
+    }
+
+    .policy-item.pass {
+      border-color: #27ae60;
+      background: #f0fdf4;
+    }
+
+    .policy-item.fail {
+      border-color: #e74c3c;
+      background: #fef2f2;
+    }
+
+    .policy-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .policy-status {
+      font-size: 1.2rem;
+      font-weight: bold;
+      min-width: 30px;
+    }
+
+    .policy-status.pass {
+      color: #27ae60;
+    }
+
+    .policy-status.fail {
+      color: #e74c3c;
+    }
+
+    .policy-name {
+      font-weight: 600;
+      color: #222;
+      flex: 1;
+    }
+
+    .policy-details {
+      font-size: .85rem;
+      color: #666;
+      margin-left: 42px;
+      padding: 8px 0;
+    }
+
+    /* ── Summary ───────────────────────────────────────── */
+    .summary {
+      background: linear-gradient(135deg, #0f3460, #16213e);
+      color: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .summary h3 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      opacity: .9;
+    }
+
+    .summary .score {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .summary .message {
+      margin-top: 12px;
+      font-size: .9rem;
+      opacity: .95;
+    }
+
+    /* ── Button ────────────────────────────────────────── */
+    #checkBtn {
+      background: #0f3460;
+      color: #fff;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    #checkBtn:hover {
+      background: #16213e;
+    }
+
+    #checkBtn:disabled {
+      background: #bbb;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      color: #888;
+      padding: 40px 0;
+    }
+
+    .loading::after {
+      content: '';
+      animation: dots 1.5s steps(4) infinite;
+    }
+
+    @keyframes dots {
+
+      0%,
+      20% {
+        content: '';
+      }
+
+      40% {
+        content: '.';
+      }
+
+      60% {
+        content: '..';
+      }
+
+      80%,
+      100% {
+        content: '...';
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Navbar ──────────────────────────────────────────────────────────── -->
+  <nav>
+    <span class="brand" onclick="window.location.href='/dashboard.html'" style="cursor: pointer;">TaskApp</span>
+    <div class="right">
+      <button id="backBtn">Back to Dashboard</button>
+    </div>
+  </nav>
+
+  <!-- ── Main ────────────────────────────────────────────────────────────── -->
+  <main>
+
+    <!-- Device Check Card -->
+    <div class="card">
+      <h2>Device Policy Compliance Check</h2>
+      <p style="color: #666; margin-bottom: 20px; font-size: .95rem;">Check if your device meets the organization's
+        security policies.</p>
+
+
+      <!-- Check Button -->
+      <button id="checkBtn">Run Policy Check</button>
+
+      <!-- Results -->
+      <div id="resultsContainer" style="display: none; margin-top: 24px;">
+        <div class="results" id="resultsList"></div>
+        <div class="summary">
+          <h3>Compliance Summary</h3>
+          <div class="score"><span id="passCount">0</span> / <span id="totalCount">0</span> Policies Passed</div>
+          <div class="message" id="summaryMessage"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="/keycloak/keycloak-bridge.js"></script>
+  <script src="/service-auth/dashboard-session.js"></script>
+  <script>
+    // ── Detect Real Device Info ────────────────────────────────────────────────
+    async function detectDeviceInfo() {
+      const ua = navigator.userAgent || "";
+      let osName = 'Unknown';
+      let osVersion = 'Unknown';
+      let browserName = 'Unknown';
+      let architecture = 'Unknown';
+
+      if (ua.includes('Windows')) {
+        osName = 'Windows';
+        const match = ua.match(/Windows NT ([\d.]+)/);
+        if (match) osVersion = match[1];
+      } else if (ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iPod')) {
+        osName = 'iOS';
+        const match = ua.match(/OS ([\d_]+)/);
+        if (match) osVersion = match[1].replace(/_/g, '.');
+      } else if (ua.includes('Mac OS X') || ua.includes('Macintosh')) {
+        osName = 'macOS';
+        const match = ua.match(/Mac OS X ([\d_]+)/);
+        if (match) osVersion = match[1].replace(/_/g, '.');
+      } else if (ua.includes('Android')) {
+        osName = 'Android';
+        const match = ua.match(/Android ([\d.]+)/);
+        if (match) osVersion = match[1];
+      } else if (ua.includes('Linux')) {
+        osName = 'Linux';
+      }
+
+      if (ua.includes('Edg/')) browserName = 'Edge';
+      else if (ua.includes('Chrome/')) browserName = 'Chrome';
+      else if (ua.includes('Firefox/')) browserName = 'Firefox';
+      else if (ua.includes('Safari/')) browserName = 'Safari';
+
+      let uaData = null;
+      if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+        try {
+          uaData = await navigator.userAgentData.getHighEntropyValues([
+            'architecture',
+            'bitness',
+            'model',
+            'platform',
+            'platformVersion',
+            'fullVersionList',
+          ]);
+          architecture = uaData.architecture || architecture;
+          if (uaData.platform) {
+            if (uaData.platform === "macOS") osName = "macOS";
+            if (uaData.platform === "Windows") osName = "Windows";
+            if (uaData.platform === "Android") osName = "Android";
+            if (uaData.platform === "iOS") osName = "iOS";
+            if (uaData.platform === "Linux") osName = "Linux";
+          }
+          if (uaData.platformVersion && uaData.platformVersion !== "0.0.0") {
+            osVersion = uaData.platformVersion;
+          }
+        } catch (_err) {
+          uaData = null;
+        }
+      }
+
+      const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+      const storageEstimate = navigator.storage && navigator.storage.estimate
+        ? await navigator.storage.estimate().catch(() => null)
+        : null;
+
+      const details = {
+        userAgent: ua,
+        language: navigator.language || null,
+        languages: navigator.languages || [],
+        platform: navigator.platform || null,
+        cookieEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack || null,
+        hardwareConcurrency: navigator.hardwareConcurrency || null,
+        deviceMemory: navigator.deviceMemory || null,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+        screen: {
+          width: screen.width,
+          height: screen.height,
+          colorDepth: screen.colorDepth,
+          pixelRatio: window.devicePixelRatio || 1,
+        },
+        connection: conn ? {
+          effectiveType: conn.effectiveType || null,
+          downlink: conn.downlink || null,
+          rtt: conn.rtt || null,
+        } : null,
+        touchPoints: navigator.maxTouchPoints || 0,
+        online: navigator.onLine,
+        storage: storageEstimate,
+        userAgentData: uaData,
+      };
+
+      return { osName, osVersion, browserName, architecture, details };
+    }
+
+    // ── Pre-load Device Info (no display elements needed) ────────────────────────
+    let deviceInfo = null;
+    (async () => {
+      deviceInfo = await detectDeviceInfo();
+    })();
+
+    // ── Back Button ──────────────────────────────────────────────────────────────
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = '/dashboard.html';
+    });
+
+    // ── Run Check ────────────────────────────────────────────────────────────────
+    document.getElementById('checkBtn').addEventListener('click', async () => {
+      const checkBtn = document.getElementById('checkBtn');
+      const resultsContainer = document.getElementById('resultsContainer');
+      const resultsList = document.getElementById('resultsList');
+
+      checkBtn.disabled = true;
+      checkBtn.textContent = 'Checking…';
+      resultsList.innerHTML = '';
+      resultsContainer.style.display = 'none';
+
+      try {
+        if (!deviceInfo) {
+          deviceInfo = await detectDeviceInfo();
+        }
+
+        // Fetch device check results from backend
+        // For Linux the browser UA never includes a distro version — send blank
+        // so the backend uses Fleet's authoritative os_version for the OS check.
+        const sentOsVersion = deviceInfo.osName === 'Linux' ? '' : deviceInfo.osVersion;
+        const res = await fetch('/api/device-check', {
+          method: 'POST',
+          headers: window.ServiceAuth.authHeaders(true),
+          body: JSON.stringify({
+            osName: deviceInfo.osName,
+            osVersion: sentOsVersion,
+            browserName: deviceInfo.browserName,
+            deviceInfo: deviceInfo.details,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          resultsList.innerHTML = `<p style="color: #e74c3c;">Error: ${data.error || 'Failed to check policies'}</p>`;
+          resultsContainer.style.display = 'block';
+          checkBtn.disabled = false;
+          checkBtn.textContent = 'Run Policy Check';
+          return;
+        }
+
+        // Display results
+        displayResults(data);
+        resultsContainer.style.display = 'block';
+      } catch (err) {
+        resultsList.innerHTML = `<p style="color: #e74c3c;">Network error. Please try again.</p>`;
+        resultsContainer.style.display = 'block';
+      } finally {
+        checkBtn.disabled = false;
+        checkBtn.textContent = 'Run Policy Check';
+      }
+    });
+
+    function displayResults(data) {
+      const resultsList = document.getElementById('resultsList');
+      const passCount = document.getElementById('passCount');
+      const totalCount = document.getElementById('totalCount');
+      const summaryMessage = document.getElementById('summaryMessage');
+
+      resultsList.innerHTML = '';
+      let passedCount = 0;
+
+      data.results.forEach(result => {
+        const div = document.createElement('div');
+        div.className = `policy-item ${result.passed ? 'pass' : 'fail'}`;
+
+        const status = result.passed ? '✓' : '✗';
+        div.innerHTML = `
+        <div class="policy-header">
+          <span class="policy-status ${result.passed ? 'pass' : 'fail'}">${status}</span>
+          <span class="policy-name">${result.policyName}</span>
+        </div>
+        <div class="policy-details">${result.details}</div>
+      `;
+
+        resultsList.appendChild(div);
+        if (result.passed) passedCount++;
+      });
+
+      passCount.textContent = passedCount;
+      totalCount.textContent = data.results.length;
+
+      const percentage = Math.round((passedCount / data.results.length) * 100);
+      if (percentage === 100) {
+        summaryMessage.textContent = 'All policies passed! Your device is compliant.';
+        summaryMessage.style.color = '#27ae60';
+      } else if (percentage >= 70) {
+        summaryMessage.textContent = `Your device is mostly compliant (${percentage}%). Some policies need attention.`;
+        summaryMessage.style.color = '#f39c12';
+      } else {
+        summaryMessage.textContent = `Your device has compliance issues (${percentage}%). Please address the failed policies.`;
+        summaryMessage.style.color = '#e74c3c';
+      }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────────
+    (async () => {
+      const ready = await window.ServiceAuth.loadSession();
+      if (!ready) {
+        window.location.href = '/oauth2/sign_in';
+        return;
+      }
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Silent SSO Redirect</title>
+</head>
+<body>
+  <script>
+    (function () {
+      //^ App-level wrapper forwards to integration-owned silent SSO page.
+      const query = window.location.search || "";
+      const hash = window.location.hash || "";
+      window.location.replace("/keycloak/silent-check-sso.html" + query + hash);
+    })();
+  </script>
+</body>
+</html>

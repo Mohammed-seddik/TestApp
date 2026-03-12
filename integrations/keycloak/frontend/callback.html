@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keycloak Callback</title>
+</head>
+<body>
+  <p id="status">Signing in...</p>
+
+  <script src="/keycloak/keycloak.js"></script>
+  <script src="/keycloak/keycloak-bridge.js"></script>
+  <script>
+    (async function () {
+      const status = document.getElementById("status");
+      function fail(message) {
+        status.textContent = message;
+      }
+
+      try {
+        const cfg = await window.KeycloakBridge.getConfig();
+        console.log("✓ Config loaded:", cfg);
+        const keycloak = new window.Keycloak({
+          url: cfg.url,
+          realm: cfg.realm,
+          clientId: cfg.clientId,
+        });
+        console.log("✓ Keycloak instance created");
+
+        const query = new URLSearchParams(window.location.search);
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const hasQueryCode = query.has("code");
+        const hasHashCode = hash.has("code");
+        const hasQueryToken = query.has("access_token") || query.has("id_token");
+        const hasHashToken = hash.has("access_token") || hash.has("id_token");
+        const hasIssOnlyQuery =
+          query.has("iss") &&
+          !hasQueryCode &&
+          !hasQueryToken &&
+          !query.has("error");
+        const hasIssOnlyFragment =
+          hash.has("iss") &&
+          !hasHashCode &&
+          !hasHashToken &&
+          !hash.has("error");
+        const error = query.get("error") || hash.get("error");
+        const errorDescription =
+          query.get("error_description") || hash.get("error_description") || "";
+
+        console.log("URL Analysis:", { hasQueryCode, hasHashCode, hasQueryToken, hasHashToken, error, errorDescription });
+
+        if (error) {
+          return fail(`Keycloak error: ${error}${errorDescription ? ` - ${errorDescription}` : ""}`);
+        }
+
+        const hasAuthResponse = hasQueryCode || hasHashCode || hasQueryToken || hasHashToken;
+        const hasIssOnly = hasIssOnlyQuery || hasIssOnlyFragment;
+
+        if (!hasAuthResponse && !hasIssOnly) {
+          return fail("No authorization response found in callback URL.");
+        }
+
+        // Recover from issuer-only callbacks by forcing one explicit login redirect once.
+        if (!hasAuthResponse && hasIssOnly) {
+          const retryKey = "kc_callback_retry_once";
+          if (!sessionStorage.getItem(retryKey)) {
+            sessionStorage.setItem(retryKey, "1");
+            console.log("Detected issuer-only callback, retrying with login...");
+            await keycloak.login({
+              redirectUri: window.location.origin + cfg.callbackPath,
+              prompt: "login",
+            });
+            return;
+          }
+
+          sessionStorage.removeItem(retryKey);
+          return fail(
+            "Issuer-only callback detected. Check Keycloak client: Standard Flow ON, valid redirect URI exactly matches callback.",
+          );
+        }
+
+        const mode = (hasQueryCode || hasQueryToken) ? "query" : "fragment";
+        console.log("Response mode:", mode);
+
+        const redirectUri = window.location.origin + cfg.callbackPath;
+
+        // Explicit backend token exchange is more reliable than browser-side exchange
+        // and avoids opaque "undefined" errors from the adapter when token POST fails.
+        let token = null;
+        let claims = {};
+        let idToken = null;
+        if (hasQueryCode || hasHashCode) {
+          const code = query.get("code") || hash.get("code");
+          const state = query.get("state") || hash.get("state");
+          let codeVerifier = null;
+
+          if (state) {
+            try {
+              const rawState = localStorage.getItem(`kc-callback-${state}`);
+              if (rawState) {
+                const parsed = JSON.parse(rawState);
+                codeVerifier = parsed && parsed.pkceCodeVerifier ? parsed.pkceCodeVerifier : null;
+              }
+            } catch (_stateErr) {
+              codeVerifier = null;
+            }
+          }
+
+          const exchangeRes = await fetch("/api/keycloak/exchange", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, redirectUri, codeVerifier }),
+          });
+          const exchangeData = await exchangeRes.json().catch(() => ({}));
+          if (!exchangeRes.ok) {
+            const details = exchangeData && exchangeData.details ? JSON.stringify(exchangeData.details) : "No details";
+            return fail(`Token exchange failed: ${details}`);
+          }
+
+          token = exchangeData.access_token || null;
+          idToken = exchangeData.id_token || null;
+          if (!token) {
+            return fail("Token exchange succeeded but no access_token was returned.");
+          }
+
+          try {
+            const payloadB64 = token.split(".")[1] || "";
+            const normalized = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+            const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+            claims = JSON.parse(atob(padded));
+          } catch (_decodeErr) {
+            claims = {};
+          }
+        } else {
+          let authenticated;
+          try {
+            authenticated = await keycloak.init({
+              onLoad: undefined,
+              checkLoginIframe: false,
+              flow: "standard",
+              responseMode: mode,
+              pkceMethod: "S256",
+              redirectUri,
+            });
+          } catch (initErr) {
+            console.error("Keycloak.init threw an error:", initErr);
+            const ie = initErr && (initErr.message || initErr.toString && initErr.toString()) || String(initErr);
+            return fail(`Keycloak init failed: ${ie}`);
+          }
+
+          if (!authenticated || !keycloak.token) {
+            return fail("No token received from Keycloak.");
+          }
+
+          token = keycloak.token;
+          claims = keycloak.tokenParsed || {};
+          idToken = keycloak.idToken || null;
+        }
+
+        sessionStorage.removeItem("kc_callback_retry_once");
+
+        console.log("✓ Session stored, redirecting to dashboard...");
+        window.KeycloakBridge.storeSession(token, claims, idToken);
+        window.location.replace("/dashboard.html");
+      } catch (err) {
+        console.error("Keycloak callback failed:", err);
+        const errorMsg = (err && err.message) || (err && err.toString && err.toString()) || String(err) || "Unknown error";
+        fail(`Keycloak callback failed: ${errorMsg}`);
+      }
+    })();
+  </script>
+</body>
+</html>

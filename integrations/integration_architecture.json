@@ -1,0 +1,32 @@
+{
+  "architecture": {
+    "version": "1.0.0",
+    "modules": [
+      {
+        "name": "keycloak",
+        "manifest": "integrations/keycloak/integration_fast.json",
+        "responsibility": "Identity verification and credential bridge"
+      },
+      {
+        "name": "fleet",
+        "manifest": "integrations/fleet/integration_fast.json",
+        "responsibility": "Device enrollment and posture metadata"
+      }
+    ],
+    "policy_plane": {
+      "engine": "OPA",
+      "inputs": [
+        "identity_claims",
+        "fleet_device_posture",
+        "request_context"
+      ],
+      "output_contract": {
+        "allow": "boolean",
+        "deny_reason": "string",
+        "tags": [
+          "string"
+        ]
+      }
+    }
+  }
+}

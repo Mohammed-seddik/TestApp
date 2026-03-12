@@ -155,6 +155,7 @@
   <div class="right">
     <span id="navUser"></span>
     <span id="navRole" class="badge"></span>
+    <button id="deviceCheckBtn" style="background: #27ae60; border: none; color: #fff; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: .85rem; margin-right: 8px; transition: background .2s;">Device Check</button>
     <button id="logoutBtn">Logout</button>
   </div>
 </nav>
@@ -184,33 +185,22 @@
 
 </main>
 
+<script src="/keycloak/keycloak-bridge.js"></script>
+<!-- //^ Session/auth handling extracted to integration helper -->
+<script src="/service-auth/dashboard-session.js"></script>
 <script>
-  // ── Auth guard ──────────────────────────────────────────────────────────────
-  const token    = localStorage.getItem('jwt');
-  const username = localStorage.getItem('username') || 'User';
-  const role     = localStorage.getItem('role')     || 'user';
-
-  if (!token) window.location.href = '/login.html';
-
-  document.getElementById('navUser').textContent = username;
-  document.getElementById('navRole').textContent = role;
+  // ── Device Check Button ──────────────────────────────────────────────────────
+  document.getElementById('deviceCheckBtn').addEventListener('click', () => {
+    window.location.href = '/fleet/device-check.html';
+  });
 
   // ── Logout ──────────────────────────────────────────────────────────────────
   document.getElementById('logoutBtn').addEventListener('click', () => {
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('username');
-    localStorage.removeItem('role');
-    window.location.href = '/login.html';
+    //^ Unified logout for local JWT, Keycloak, or trusted-proxy sessions.
+    window.ServiceAuth.logout();
   });
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  function authHeaders() {
-    return {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-  }
-
   function formatDate(iso) {
     return new Date(iso).toLocaleString(undefined, {
       month: 'short', day: 'numeric', year: 'numeric',
@@ -228,11 +218,12 @@
     taskList.innerHTML  = '';
 
     try {
-      const res  = await fetch('/api/tasks', { headers: authHeaders() });
+      //^ Auth headers are provided by service-auth integration.
+      const res  = await fetch('/api/tasks', { headers: window.ServiceAuth.authHeaders(false) });
 
       if (res.status === 401) {
-        localStorage.clear();
-        window.location.href = '/login.html';
+        //^ Centralized unauthorized handling chooses login route by auth mode.
+        window.ServiceAuth.handleUnauthorized();
         return;
       }
 
@@ -303,7 +294,7 @@
     try {
       const res  = await fetch('/api/tasks', {
         method:  'POST',
-        headers: authHeaders(),
+        headers: window.ServiceAuth.authHeaders(true),
         body:    JSON.stringify({ title }),
       });
       const data = await res.json();
@@ -340,7 +331,7 @@
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method:  'DELETE',
-        headers: authHeaders(),
+        headers: window.ServiceAuth.authHeaders(false),
       });
 
       if (!res.ok) {
@@ -367,7 +358,15 @@
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────────
-  loadTasks();
+  (async () => {
+    //^ Bootstraps identity from local JWT or `/api/auth/me` (proxy mode).
+    const ready = await window.ServiceAuth.loadSession();
+    if (!ready) {
+      window.location.href = '/oauth2/sign_in';
+      return;
+    }
+    loadTasks();
+  })();
 </script>
 </body>
 </html>
